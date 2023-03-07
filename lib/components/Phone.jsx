@@ -242,6 +242,37 @@ export default class Phone extends React.Component
 
 		this._ua.on('newRTCSession', (data) =>
 		{
+			const session = data.session;
+
+			if (this.props.settings.ice_gather_timeout &&
+				this.props.settings.ice_gather_timeout > 0)
+			{
+				let timeoutFn = null;
+				let sdp = null;
+
+				logger.debug('starting icecandidate gather timer expiring in %s ms',
+					this.props.settings.ice_gather_timeout.toString());
+				session.on('icecandidate', (icecandidatedata) =>
+				{
+					if (!timeoutFn)
+					{
+						setTimeout(timeoutFn = function()
+						{
+							if (!sdp)
+							{
+								logger.debug('icecandidate gather timeout');
+								icecandidatedata.ready();
+							}
+						}, this.props.settings.ice_gather_timeout);
+					}
+				});
+
+				session.on('sdp', (sdpdata) =>
+				{
+					sdp = sdpdata.sdp;
+				});
+			}
+
 			if (!this._mounted)
 				return;
 
@@ -254,7 +285,6 @@ export default class Phone extends React.Component
 			logger.debug('UA "newRTCSession" event');
 
 			const state = this.state;
-			const session = data.session;
 
 			// Avoid if busy or other incoming
 			if (state.session || state.incomingSession)
@@ -301,6 +331,7 @@ export default class Phone extends React.Component
 						incomingSession : null
 					});
 			});
+
 		});
 
 		this._ua.start();
