@@ -122,11 +122,11 @@ export default class Phone extends React.Component
 
 	startIceGatheringTimer(session)
 	{
-		if (this.props.settings.ice_gather_timeout &&
+		if (typeof(this.props.settings.ice_gather_timeout) === 'number' &&
 			this.props.settings.ice_gather_timeout > 0)
 		{
 			let timeoutFn = null;
-			let sdp = null;
+			let sdp = false;
 
 			logger.debug('starting icecandidate gather timer expiring in %s ms',
 				this.props.settings.ice_gather_timeout.toString());
@@ -149,7 +149,7 @@ export default class Phone extends React.Component
 			{
 				if (sdpdata.originator == 'local')
 				{
-					sdp = sdpdata.sdp;
+					sdp = true;
 				}
 			});
 		}
