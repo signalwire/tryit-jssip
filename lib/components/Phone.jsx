@@ -120,6 +120,41 @@ export default class Phone extends React.Component
 		);
 	}
 
+	startIceGatheringTimer(session)
+	{
+		if (this.props.settings.ice_gather_timeout &&
+			this.props.settings.ice_gather_timeout > 0)
+		{
+			let timeoutFn = null;
+			let sdp = null;
+
+			logger.debug('starting icecandidate gather timer expiring in %s ms',
+				this.props.settings.ice_gather_timeout.toString());
+			session.on('icecandidate', (icecandidatedata) =>
+			{
+				if (!timeoutFn)
+				{
+					setTimeout(timeoutFn = function()
+					{
+						if (!sdp)
+						{
+							logger.debug('icecandidate gather timeout');
+							icecandidatedata.ready();
+						}
+					}, this.props.settings.ice_gather_timeout);
+				}
+			});
+
+			session.on('sdp', (sdpdata) =>
+			{
+				if (sdpdata.originator == 'local')
+				{
+					sdp = sdpdata.sdp;
+				}
+			});
+		}
+	}
+
 	componentDidMount()
 	{
 		this._mounted = true;
@@ -242,45 +277,19 @@ export default class Phone extends React.Component
 
 		this._ua.on('newRTCSession', (data) =>
 		{
-			const session = data.session;
-
-			if (this.props.settings.ice_gather_timeout &&
-				this.props.settings.ice_gather_timeout > 0)
-			{
-				let timeoutFn = null;
-				let sdp = null;
-
-				logger.debug('starting icecandidate gather timer expiring in %s ms',
-					this.props.settings.ice_gather_timeout.toString());
-				session.on('icecandidate', (icecandidatedata) =>
-				{
-					if (!timeoutFn)
-					{
-						setTimeout(timeoutFn = function()
-						{
-							if (!sdp)
-							{
-								logger.debug('icecandidate gather timeout');
-								icecandidatedata.ready();
-							}
-						}, this.props.settings.ice_gather_timeout);
-					}
-				});
-
-				session.on('sdp', (sdpdata) =>
-				{
-					sdp = sdpdata.sdp;
-				});
-			}
-
 			if (!this._mounted)
 				return;
 
 			// TODO: For testing.
 			window.SESSION = data.session;
+			const session = data.session;
 
 			if (data.originator === 'local')
+			{
+				this.startIceGatheringTimer(session);
+
 				return;
+			}
 
 			logger.debug('UA "newRTCSession" event');
 
@@ -444,6 +453,7 @@ export default class Phone extends React.Component
 
 		const session = this.state.incomingSession;
 
+		this.startIceGatheringTimer(session);
 		session.answer(
 			{
 				pcConfig : this.props.settings.pcConfig || { iceServers: [] }
