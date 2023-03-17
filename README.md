@@ -1,6 +1,6 @@
 # tryit-jssip
 
-The [JsSIP](http://jssip.net) demo application.
+SignalWire's fork of the [JsSIP](http://jssip.net) demo application with some enhancements that address common problems.
 
 Check it online at https://tryit.jssip.net
 
